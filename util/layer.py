@@ -22,6 +22,11 @@ class Layer:
 		self.input_k = prev.output_k
 		self.input_channel = prev.output_channel
 
+	# Re-initialize input parameters
+	def reinit(self, input_k, input_channel):
+		self.input_k = utils.make_double(input_k)
+		self.input_channel = input_channel
+
 # Pooling layer
 class PoolLayer(Layer):
 	def __init__(self, name='pooling', input_k=0, input_channel=0, \
@@ -55,6 +60,8 @@ class PoolLayer(Layer):
 		self.calculate_FLOPs()
 
 
+
+
 # Convolutional Layer, current version only contain 2d
 # 1d and 3d will be added later
 class ConvLayer(Layer):
@@ -78,22 +85,26 @@ class ConvLayer(Layer):
 						+2*self.padding[1]-1)/float(self.stride[1]) + 1.0))
 
 	def calculate_parameters(self):
-		self.params = np.multiply.reduce(self.kernel) * self.input_channel * self.output_channel
+		self.params = float(np.multiply.reduce(self.kernel)) * self.input_channel * self.output_channel
+		if self.bias == True:
+			self.params += self.output_channel
 
 	def calculate_FLOPs(self):
-		self.times_ops = np.multiply.reduce(self.kernel) * self.input_channel *\
+		self.times_ops = float(np.multiply.reduce(self.kernel)) * self.input_channel *\
 						np.multiply.reduce(self.output_k) * self.output_channel
 		if self.bias == True:
 			self.add_ops = self.times_ops
 		else:
-			self.add_ops = (np.multiply.reduce(self.kernel) * self.input_channel - 1) *\
+			self.add_ops = (float(np.multiply.reduce(self.kernel)) * self.input_channel - 1) *\
 							np.multiply.reduce(self.output_k) * self.output_channel
 		self.FLOPs = self.times_ops + self.add_ops
+
 
 	def calculate_all(self):
 		self.calculate_output()
 		self.calculate_parameters()
 		self.calculate_FLOPs()
+
 
 # Fully-Connected Layer
 class FCLayer(Layer):
@@ -102,7 +113,7 @@ class FCLayer(Layer):
 		self.output_k = output_k
 
 	def calculate_parameters(self):
-		self.params =np.multiply.reduce(self.input_k) * self.input_width * self.output_neuron
+		self.params = 2 * np.multiply.reduce(self.input_k) * self.input_channel * self.output_k
 
 	def calculate_FLOPs(self):
 		self.times_ops = self.params
@@ -112,3 +123,13 @@ class FCLayer(Layer):
 	def calculate_all(self):
 		self.calculate_parameters()
 		self.calculate_FLOPs()
+
+
+# Concatenation, defined as layer for utility
+class ConcateLayer(Layer):
+	def __init__(self, name='ConcateLayer', layer_list=[]):
+		self.output_k = layer_list[0].output_k
+		self.output_channel = 0
+		for i,l in enumerate(layer_list):
+			self.output_channel += l.output_channel			
+		#Qprint(self.output_channel)

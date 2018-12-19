@@ -6,7 +6,7 @@
 
 
 # If input is a single int, output is a two-element list and both equals to input
-# If input is 
+# If input is a list, return the same
 def make_double(old):
 	if isinstance(old,int):
 		new = [old,old]
